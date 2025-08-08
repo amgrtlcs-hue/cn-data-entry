@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ur">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Entry Page</title>
+    <style>
+        body { font-family: sans-serif; direction: rtl; text-align: right; background-color: #f4f4f4; margin: 20px; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h2, h3 { color: #333; }
+        input[type="text"], input[type="password"] { width: 95%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        button { background-color: #007bff; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+        button:hover { background-color: #0056b3; }
+        #data-entry-section { display: none; }
+        ul { list-style-type: none; padding: 0; }
+        li { background: #eee; margin-bottom: 5px; padding: 8px; border-radius: 4px; text-align: left; }
+        #message { margin-top: 15px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Login Section -->
+        <div id="login-section">
+            <h2>Login</h2>
+            <input type="password" id="password" placeholder="Station ka Password daalein">
+            <button onclick="login()">Login Karein</button>
+        </div>
+
+        <!-- Data Entry Section -->
+        <div id="data-entry-section">
+            <h2 id="station-name"></h2>
+            <input type="text" id="courier_code" placeholder="Courier Code">
+            <input type="text" id="courier_name" placeholder="Courier ka Naam">
+            
+            <h3>CN Numbers</h3>
+            <input type="text" id="cn_number_input" placeholder="CN Number daalein">
+            <button onclick="addCnNumber()">Number Shamil Karein</button>
+            
+            <ul id="cn-list">
+                <!-- Yahan CN numbers ki list show hogi -->
+            </ul>
+            
+            <hr>
+            <button onclick="saveData()">Tamam Data Mehfooz Karein</button>
+            <p id="message"></p>
+        </div>
+    </div>
+
+    <script>
+        // YAHAN APNA COPY KIYA HUA URL PASTE KAREIN
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx2HCUetztCRZu98JftMI0_bI77XABuLfPh2BhkbYv95QD7mh3SeuEnZBCax8bocq0pMw/exec';
+
+        // Station aur unke password yahan set karein
+        const stations = {
+            "SKT": "123", // Pehla station aur password
+            "KHI": "abc@123"  // Doosra station aur password
+        };
+        let currentStation = "";
+
+        function login() {
+            const enteredPassword = document.getElementById('password').value;
+            let loggedIn = false;
+            for (const station in stations) {
+                if (stations[station] === enteredPassword) {
+                    currentStation = station;
+                    loggedIn = true;
+                    break;
+                }
+            }
+
+            if (loggedIn) {
+                document.getElementById('login-section').style.display = 'none';
+                document.getElementById('data-entry-section').style.display = 'block';
+                document.getElementById('station-name').innerText = "Station: " + currentStation;
+            } else {
+                alert("Ghalat Password!");
+            }
+        }
+
+        function addCnNumber() {
+            const cnInput = document.getElementById('cn_number_input');
+            const cnValue = cnInput.value.trim();
+
+            if (cnValue === "") {
+                alert("Pehle CN Number likhein.");
+                return;
+            }
+
+            const list = document.getElementById('cn-list');
+            const listItem = document.createElement('li');
+            listItem.textContent = cnValue;
+            list.appendChild(listItem);
+
+            cnInput.value = "";
+            cnInput.focus();
+        }
+
+        function saveData() {
+            const courierCode = document.getElementById('courier_code').value;
+            const courierName = document.getElementById('courier_name').value;
+            const messageDiv = document.getElementById('message');
+
+            const cnListItems = document.querySelectorAll('#cn-list li');
+            if (cnListItems.length === 0) {
+                alert("Kam se kam ek CN number shamil karein.");
+                return;
+            }
+
+            const cnNumbers = [];
+            cnListItems.forEach(item => {
+                cnNumbers.push(item.textContent);
+            });
+
+            const data = {
+                station: currentStation,
+                courier_code: courierCode,
+                courier_name: courierName,
+                cn_numbers: cnNumbers
+            };
+            
+            messageDiv.textContent = "Data bheja ja raha hai...";
+            messageDiv.style.color = "orange";
+
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'cors',
+                cache: 'no-cache',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                redirect: 'follow',
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.result === 'success'){
+                    messageDiv.textContent = "Data kaamyabi se save ho gaya!";
+                    messageDiv.style.color = "green";
+                    document.getElementById('courier_code').value = "";
+                    document.getElementById('courier_name').value = "";
+                    document.getElementById('cn-list').innerHTML = "";
+                } else {
+                    throw new Error(data.message);
+                }
+            })
+            .catch(error => {
+                messageDiv.textContent = "Error: " + error.message;
+                messageDiv.style.color = "red";
+            });
+        }
+    </script>
+
+</body>
+</html>
